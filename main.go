@@ -17,7 +17,6 @@ import (
 )
 
 
-
 type Record struct {
 	Id		int
 	Account		string
