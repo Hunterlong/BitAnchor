@@ -16,7 +16,7 @@
     var bidarray = [];
     var spreadarray = [];
 
-    var serversocket = new WebSocket("ws://localhost:8080/claim_info_ws/{{.Id}}");
+    var serversocket = new WebSocket("ws://bitanchor.com/claim_info_ws/{{.Id}}");
 
     serversocket.onopen = function() {
         serversocket.send("Connection init");

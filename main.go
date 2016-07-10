@@ -176,7 +176,7 @@ func CreateNewClaim(newRecord Record) int64 {
 
 	randomQrName := RandomChars(32)
 	qrcode_string := "bitcoin:"+address.String()+"?amount="+string(newRecord.Amount)
-	qrcode_png := "qrcodes/qr-"+randomQrName+".png"
+	qrcode_png := "static/qrcodes/qr-"+randomQrName+".png"
 	err := qrcode.WriteFile(qrcode_string, qrcode.Medium, 256, qrcode_png)
 	if err!=nil {}
 
