@@ -1,4 +1,4 @@
-# BitAnchor.com
+# BitAnchor.com   [![Build Status](https://travis-ci.org/Hunterlong/BitAnchor.svg?branch=master)](https://travis-ci.org/Hunterlong/BitAnchor)
 A Bitcoin tool that allows a user to receive your bitcoins via Password. 
 
 ## Bugs
