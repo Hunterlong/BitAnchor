@@ -107,8 +107,8 @@
 
 
             <form id="submit_receive_claim" action="/receive/{{.Id}}" method="POST" class="col s12 m8 offset-m1 {{if .Sent}} red {{else}} green {{end}} lighten-5" style="border: 1px solid #cecece;">
-            <div class="input-field col s9 m9">
-                <input {{if .Active}} {{else}} disabled {{end}} type="text" id="password" name="password">
+            <div class="input-field col s12 m9">
+                <input required {{if .Active}} {{else}} disabled {{end}} type="text" id="password" name="password">
                 <label for="password">
                     {{if .Sent}}
                     Transaction Already Sent To Receiver
@@ -121,11 +121,15 @@
                     {{end}}
                 </label>
             </div>
+                <div class="input-field col s12 m9">
+                    <input required {{if .Active}} {{else}} disabled {{end}} type="text" id="address" name="address">
+                    <label for="address">Your Receiving Bitcoin Address</label>
+                </div>
 
                 {{ if .Active }}
-                    <button type="submit" class="waves-effect waves-light btn" style="margin-top: 19px;margin-right: 15px;float: right;">Claim</button>
+                    <button type="submit" class="waves-effect waves-light btn-large" style="margin-top: -25px;margin-right: 15px;float: right;">Claim</button>
                 {{else}}
-                    <button disabled type="submit" class="btn disabled" style="margin-top: 19px;margin-right: 15px;float: right;">Waiting</button>
+                    <button disabled type="submit" class="btn-large disabled" style="margin-top: -25px;margin-right: 15px;float: right;">Waiting</button>
                 {{end}}
             </form>
             </div>
@@ -135,10 +139,10 @@
                 <span class="blue-text text-darken-2">
                 {{if .Paid}}
                     Receiving Transaction ID:<br>
-                    <a target="_blank" href="https://blockchain.info/tx/{{.TransactionId}}">{{.TransactionId}}</a>
+                    <a target="_blank" class="truncate" href="https://blockchain.info/tx/{{.TransactionId}}">{{.TransactionId}}</a>
                 {{if .Sent}}
                     <p>Outgoing Transaction ID:<br>
-                    <a target="_blank" href="https://blockchain.info/tx/{{.OutgoingTransactionId}}">{{.OutgoingTransactionId}}</a>
+                    <a target="_blank" class="truncate" href="https://blockchain.info/tx/{{.OutgoingTransactionId}}">{{.OutgoingTransactionId}}</a>
                 {{end}}
                 {{else}}
                     Pay exactly {{.Amount}} to Bitcoin Address {{.Wallet}} for this record to become active.<br>

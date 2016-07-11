@@ -24,7 +24,6 @@ func ReceiveClaimHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 	thisRecord, _ := FetchClaim(id)
-	var tranxId *wire.ShaHash
 
 	password := r.FormValue("password")
 	address := r.FormValue("address")
@@ -32,17 +31,16 @@ func ReceiveClaimHandler(w http.ResponseWriter, r *http.Request) {
 
 	if passed {
 		fmt.Println("corrected password")
-		address = ""
 		tranxId, success := SendClaimToAddress(address, thisRecord)
 		fmt.Println(tranxId)
 		fmt.Println(success)
 	} else {
-		fmt.Println("wrong")
+		fmt.Println("wrong password")
 	}
 
-	response := map[string]interface{}{"status": "success", "transaction_id": tranxId.String()}
 
-	newJsonOutput, _ := json.Marshal(response)
+	updatedThisRecord, _ := FetchClaim(id)
+	newJsonOutput, _ := json.Marshal(updatedThisRecord)
 
 	w.Write(newJsonOutput)
 
