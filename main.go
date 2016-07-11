@@ -71,10 +71,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Block count: ", blockCount)
 
-	fmt.Println(client.GetBalance("qfh28vjuw0rfzbpitf7ocq205gtyqy3l"))
+	fmt.Println("BitAnchor Server Started!")
 
+	fmt.Println("Current Block Count: ", blockCount)
 
 	go startChecks()
 
