@@ -14,6 +14,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"time"
 	"os"
+	"github.com/btcsuite/btcutil"
 )
 
 
@@ -65,6 +66,9 @@ func main() {
 	// Notice the notification parameter is nil since notifications are
 	// not supported in HTTP POST mode.
 	client, _ = btcrpcclient.New(connCfg, nil)
+
+	fee := btcutil.Amount(1000)
+	client.SetTxFee(fee)
 
 	// Get the current block count.
 	blockCount, err := client.GetBlockCount()
