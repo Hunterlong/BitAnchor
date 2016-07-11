@@ -44,7 +44,7 @@ var db *sql.DB
 
 func startChecks() {
 	for {
-		time.Sleep(2 * time.Second)
+		time.Sleep(4 * time.Second)
 		go CheckUnpaidClaims()
 		go CheckUnconfirmedClaims()
 	}
@@ -198,24 +198,23 @@ func CreateNewClaim(newRecord Record) int64 {
 
 func FetchAllUnpaidClaims() ([]Record, bool) {
 
-	rows, err := db.Query("SELECT id,account,wallet,outgoing_wallet,return_wallet,amount,password,active,locked,paid,sent,transaction_id,qrcode_file FROM records WHERE sent=false AND paid=?", false)
+	rows, err := db.Query("SELECT id,account,wallet,outgoing_wallet,return_wallet,amount,password,active,locked,paid,sent,transaction_id,out_transaction_id,qrcode_file FROM records WHERE sent=false AND paid=?", false)
 	var success bool = false
 	var RecordArrays []Record
 
 	if err == sql.ErrNoRows {
 		return RecordArrays, success
 	} else {
-
 		for rows.Next() {
 			var recordid int
-			var account, wallet, outgoing_wallet, return_wallet, amount, password, transaction_id, qrcode_file string
+			var account, wallet, outgoing_wallet, return_wallet, amount, password, transaction_id, out_transaction_id, qrcode_file string
 			var active, locked, paid, sent bool
-			err := rows.Scan(&recordid, &account, &wallet, &outgoing_wallet, &return_wallet, &amount, &password, &active, &locked, &paid, &sent, &transaction_id, &qrcode_file)
-			if err != nil {
-				record := Record{Id: recordid, Account: account, Wallet: wallet, OutgoingWallet: outgoing_wallet, ReturnWallet: return_wallet, Amount: amount, Password: password, Active: active, Locked: locked, Paid: paid, Sent: sent, TransactionId: transaction_id, QRcodeFile: qrcode_file}
+			rows.Scan(&recordid, &account, &wallet, &outgoing_wallet, &return_wallet, &amount, &password, &active, &locked, &paid, &sent, &transaction_id, &out_transaction_id, &qrcode_file)
+
+				record := Record{Id: recordid, Account: account, Wallet: wallet, OutgoingWallet: outgoing_wallet, ReturnWallet: return_wallet, Amount: amount, Password: password, Active: active, Locked: locked, Paid: paid, Sent: sent, TransactionId: transaction_id, OutgoingTransactionId: out_transaction_id, QRcodeFile: qrcode_file}
 				RecordArrays = append(RecordArrays, record)
 				success = true
-			}
+
 		}
 
 		return RecordArrays, success
@@ -227,25 +226,29 @@ func FetchAllUnpaidClaims() ([]Record, bool) {
 
 func FetchAllPendingConfirmsClaims() ([]Record, bool) {
 
-	rows, _ := db.Query("SELECT id,account,wallet,outgoing_wallet,return_wallet,amount,password,active,locked,paid,sent,transaction_id,qrcode_file FROM records WHERE sent=false and paid=true and active=?", false)
+	rows, err := db.Query("SELECT id,account,wallet,outgoing_wallet,return_wallet,amount,password,active,locked,paid,sent,transaction_id,out_transaction_id,qrcode_file FROM records WHERE sent=false and paid=true and active=?", false)
 	var success bool = false
 	var RecordArrays []Record
 
-	for rows.Next() {
-		var recordid int
-		var account, wallet, outgoing_wallet, return_wallet, amount, password, transaction_id, qrcode_file string
-		var active, locked, paid, sent bool
-		err := rows.Scan(&recordid, &account, &wallet, &outgoing_wallet, &return_wallet, &amount, &password, &active, &locked, &paid, &sent, &transaction_id, &qrcode_file)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				success = false
-			} else {
+	if err == sql.ErrNoRows {
+		return RecordArrays, success
+	} else {
+		for rows.Next() {
+			var recordid int
+			var account, wallet, outgoing_wallet, return_wallet, amount, password, transaction_id, out_transaction_id, qrcode_file string
+			var active, locked, paid, sent bool
+			err := rows.Scan(&recordid, &account, &wallet, &outgoing_wallet, &return_wallet, &amount, &password, &active, &locked, &paid, &sent, &transaction_id, &out_transaction_id, &qrcode_file)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					success = false
+				} else {
 
+				}
+			} else {
+				record := Record{Id: recordid, Account: account, Wallet: wallet, OutgoingWallet: outgoing_wallet, ReturnWallet: return_wallet, Amount: amount, Password: password, Active: active, Locked: locked, Paid: paid, Sent: sent, TransactionId: transaction_id, OutgoingTransactionId: out_transaction_id, QRcodeFile: qrcode_file}
+				RecordArrays = append(RecordArrays, record)
+				success = true
 			}
-		} else {
-			record := Record{Id: recordid, Account: account, Wallet: wallet, OutgoingWallet: outgoing_wallet, ReturnWallet: return_wallet, Amount: amount, Password: password, Active: active, Locked: locked, Paid: paid, Sent: sent, TransactionId: transaction_id, QRcodeFile: qrcode_file}
-			RecordArrays = append(RecordArrays, record)
-			success = true
 		}
 	}
 
