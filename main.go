@@ -26,6 +26,7 @@ type Record struct {
 	Amount		string
 	QRcodeFile	string
 	TransactionId	string
+	OutgoingTransactionId	string
 	Password	string
 	CallBackURL	string
 	NotifyMethod	string
@@ -72,6 +73,9 @@ func main() {
 	}
 	fmt.Println("Block count: ", blockCount)
 
+	fmt.Println(client.GetBalance("qfh28vjuw0rfzbpitf7ocq205gtyqy3l"))
+
+
 	go startChecks()
 
 	r := mux.NewRouter()
@@ -81,8 +85,7 @@ func main() {
 	r.HandleFunc("/claim_info/{id}", ClaimInfoHandler)
 	r.HandleFunc("/claim_info_ws/{id}", ClaimInfoSocketHandler)
 
-	s := http.StripPrefix("/qrcodes/", http.FileServer(http.Dir("./qrcodes/")))
-	r.PathPrefix("/qrcodes/").Handler(s)
+	r.HandleFunc("/receive/{id}", ReceiveClaimHandler)
 
 	c := http.StripPrefix("/static/", http.FileServer(http.Dir("./static/")))
 	r.PathPrefix("/static/").Handler(c)
@@ -91,8 +94,8 @@ func main() {
 
 	http.Handle("/", r)
 
-	message := "Server is now online!"
-	SendTextMessage(os.Getenv("twilio_test"), message)
+	//message := "Server is now online!"
+	//SendTextMessage(os.Getenv("twilio_test"), message)
 
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
@@ -111,10 +114,6 @@ func CheckUnpaidClaims() {
 				if v.Account == val.Account {
 					fmt.Println("Wallet transaction matched!")
 					MarkClaimPaid(val.Account, val.Fee, val.TxID)
-					if v.NotifyValue != "" {
-						message := "Your Bitcoin transaction has just been paid, waiting for 3 confirmations now."
-						SendTextMessage(v.NotifyValue, message)
-					}
 				}
 			}
 		}
@@ -167,6 +166,16 @@ func MarkClaimConfirmed(transactionId string){
 }
 
 
+func MarkClaimSent(claim Record, to_wallet string, out_trans_id string){
+	stmt, _ := db.Prepare("update records set sent=true, active=false, outgoing_wallet=?, out_transaction_id=?, updated_at=NOW() where account=?")
+	res, _ := stmt.Exec(to_wallet, out_trans_id, claim.Account)
+	affect, _ := res.RowsAffected()
+	if affect==1 {
+		fmt.Println("updated record to paid!")
+	}
+}
+
+
 
 func CreateNewClaim(newRecord Record) int64 {
 
@@ -189,7 +198,7 @@ func CreateNewClaim(newRecord Record) int64 {
 
 func FetchAllUnpaidClaims() ([]Record, bool) {
 
-	rows, err := db.Query("SELECT id,account,wallet,outgoing_wallet,return_wallet,amount,password,active,locked,paid,sent,transaction_id,qrcode_file FROM records WHERE paid=?", false)
+	rows, err := db.Query("SELECT id,account,wallet,outgoing_wallet,return_wallet,amount,password,active,locked,paid,sent,transaction_id,qrcode_file FROM records WHERE sent=false AND paid=?", false)
 	var success bool = false
 	var RecordArrays []Record
 
@@ -203,12 +212,6 @@ func FetchAllUnpaidClaims() ([]Record, bool) {
 			var active, locked, paid, sent bool
 			err := rows.Scan(&recordid, &account, &wallet, &outgoing_wallet, &return_wallet, &amount, &password, &active, &locked, &paid, &sent, &transaction_id, &qrcode_file)
 			if err != nil {
-				if err == sql.ErrNoRows {
-					success = false
-				} else {
-
-				}
-			} else {
 				record := Record{Id: recordid, Account: account, Wallet: wallet, OutgoingWallet: outgoing_wallet, ReturnWallet: return_wallet, Amount: amount, Password: password, Active: active, Locked: locked, Paid: paid, Sent: sent, TransactionId: transaction_id, QRcodeFile: qrcode_file}
 				RecordArrays = append(RecordArrays, record)
 				success = true
@@ -224,7 +227,7 @@ func FetchAllUnpaidClaims() ([]Record, bool) {
 
 func FetchAllPendingConfirmsClaims() ([]Record, bool) {
 
-	rows, _ := db.Query("SELECT id,account,wallet,outgoing_wallet,return_wallet,amount,password,active,locked,paid,sent,transaction_id,qrcode_file FROM records WHERE paid=true and active=?", false)
+	rows, _ := db.Query("SELECT id,account,wallet,outgoing_wallet,return_wallet,amount,password,active,locked,paid,sent,transaction_id,qrcode_file FROM records WHERE sent=false and paid=true and active=?", false)
 	var success bool = false
 	var RecordArrays []Record
 
@@ -253,12 +256,12 @@ func FetchAllPendingConfirmsClaims() ([]Record, bool) {
 
 
 func FetchClaim(id string) (Record, bool) {
-	rows := db.QueryRow("SELECT id,account,wallet,outgoing_wallet,return_wallet,amount,password,active,locked,paid,sent,transaction_id,qrcode_file,notify_method,notify_value,callback_url FROM records WHERE id=?", id)
+	rows := db.QueryRow("SELECT id,account,wallet,outgoing_wallet,return_wallet,amount,password,active,locked,paid,sent,transaction_id,out_transaction_id,qrcode_file,notify_method,notify_value,callback_url FROM records WHERE id=?", id)
 	var recordid int
-	var account,wallet,outgoing_wallet,return_wallet,amount,password,transaction_id,qrcode_file,notify_method,notify_value,call_back_url string
+	var account,wallet,outgoing_wallet,return_wallet,amount,password,transaction_id,out_transaction_id,qrcode_file,notify_method,notify_value,call_back_url string
 	var active, locked, paid, sent bool
 	var success bool = false
-	err := rows.Scan(&recordid, &account,&wallet,&outgoing_wallet,&return_wallet,&amount,&password,&active,&locked,&paid,&sent,&transaction_id,&qrcode_file,&notify_method,&notify_value,&call_back_url)
+	err := rows.Scan(&recordid, &account,&wallet,&outgoing_wallet,&return_wallet,&amount,&password,&active,&locked,&paid,&sent,&transaction_id,&out_transaction_id,&qrcode_file,&notify_method,&notify_value,&call_back_url)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			success=false
@@ -268,7 +271,7 @@ func FetchClaim(id string) (Record, bool) {
 	} else {
 		success=true
 	}
-	record := Record{Id: recordid, Account: account, Wallet: wallet, OutgoingWallet: outgoing_wallet, ReturnWallet: return_wallet, Amount: amount, Password: password, Active: active, Locked: locked, Paid: paid, Sent: sent, TransactionId: transaction_id, QRcodeFile: qrcode_file, NotifyMethod: notify_method, NotifyValue: notify_value, CallBackURL: call_back_url}
+	record := Record{Id: recordid, Account: account, Wallet: wallet, OutgoingWallet: outgoing_wallet, ReturnWallet: return_wallet, Amount: amount, Password: password, Active: active, Locked: locked, Paid: paid, Sent: sent, TransactionId: transaction_id, OutgoingTransactionId: out_transaction_id, QRcodeFile: qrcode_file, NotifyMethod: notify_method, NotifyValue: notify_value, CallBackURL: call_back_url}
 
 	return record, success
 }
