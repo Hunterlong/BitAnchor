@@ -15,14 +15,6 @@ func CheckPassword(passwd []byte, truepasswd []byte) bool {
 	return false
 }
 
-func EncryptPassword(passwd []byte) []byte {
-	hashedPassword, err := bcrypt.GenerateFromPassword(passwd, bcrypt.DefaultCost)
-	if err != nil {
-		panic(err)
-	}
-	return hashedPassword
-}
-
 func CreateNewWalletHandler(w http.ResponseWriter, r *http.Request) {
 
 	depositAmount := r.FormValue("amount")
@@ -44,11 +36,14 @@ func CreateNewWalletHandler(w http.ResponseWriter, r *http.Request) {
 	newId := CreateNewClaim(newRecord)
 	thisId := strconv.FormatInt(newId, 10)
 
-	//outputJson := map[string]interface{}{"status": "success", "id": newId}
-	//output, _ := json.Marshal(outputJson)
-
-	//SendTextMessage("18054163434", "A new wallet was created! Bitcoin Address: "+address.String())
-
 	url := "/claim/"+thisId
 	http.Redirect(w, r, url, 302)
+}
+
+func EncryptPassword(passwd []byte) []byte {
+	hashedPassword, err := bcrypt.GenerateFromPassword(passwd, bcrypt.DefaultCost)
+	if err != nil {
+		panic(err)
+	}
+	return hashedPassword
 }
